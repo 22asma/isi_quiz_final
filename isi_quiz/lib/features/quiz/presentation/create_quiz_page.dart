@@ -7,7 +7,7 @@ import '../../../../core/theme/app_theme.dart';
 
 // ─── Quiz Type Enum ───────────────────────────────────────────────────────────
 
-enum QuizType { quiz, vraiFaux, texteLibre }
+enum QuizType { quiz, vraiFaux }
 
 extension QuizTypeLabel on QuizType {
   String get label {
@@ -16,8 +16,6 @@ extension QuizTypeLabel on QuizType {
         return 'Quiz';
       case QuizType.vraiFaux:
         return 'Vrai / Faux';
-      case QuizType.texteLibre:
-        return 'Texte libre';
     }
   }
 
@@ -27,8 +25,6 @@ extension QuizTypeLabel on QuizType {
         return 'Quiz';
       case QuizType.vraiFaux:
         return 'Vrai/Faux';
-      case QuizType.texteLibre:
-        return 'Texte libre';
     }
   }
 }
@@ -62,8 +58,7 @@ class _CreateQuizPageState extends State<CreateQuizPage> {
   // Controllers
   final _quizTitleController = TextEditingController();
   final _questionController = TextEditingController();
-  final _textAnswerController = TextEditingController(); // for Texte libre
-
+  
   // Answers (Quiz)
   final List<_AnswerEntry> _answers = [
     _AnswerEntry(isCorrect: true),
@@ -82,6 +77,8 @@ class _CreateQuizPageState extends State<CreateQuizPage> {
   bool? _vraiFauxAnswer; // true = Vrai, false = Faux, null = not selected
   int _timeLimit = 20;
   String _pointsType = 'Standard';
+  bool _isPublic = true;
+  int _maxParticipants = 10; // Pour les quiz privés
   
   // Service / loading
   final QuizService _quizService = QuizService();
@@ -116,7 +113,6 @@ class _CreateQuizPageState extends State<CreateQuizPage> {
   void dispose() {
     _quizTitleController.dispose();
     _questionController.dispose();
-    _textAnswerController.dispose();
     for (final a in _answers) {
       a.dispose();
     }
@@ -197,13 +193,6 @@ class _CreateQuizPageState extends State<CreateQuizPage> {
       return false;
     }
 
-    if (_quizType == QuizType.texteLibre) {
-      if (_textAnswerController.text.trim().isEmpty) {
-        _showSnack('Veuillez entrer au moins une réponse correcte', isError: true);
-        return false;
-      }
-    }
-
     if (_quizType == QuizType.quiz) {
       final filled = _answers
           .where((a) => a.controller.text.trim().isNotEmpty)
@@ -232,20 +221,6 @@ class _CreateQuizPageState extends State<CreateQuizPage> {
           {'text': 'Faux', 'is_correct': _vraiFauxAnswer == false, 'order': 2},
         ];
         break;
-      case QuizType.texteLibre:
-        answersData = _textAnswerController.text
-            .split(',')
-            .where((s) => s.trim().isNotEmpty)
-            .toList()
-            .asMap()
-            .entries
-            .map((e) => {
-                  'text': e.value.trim(),
-                  'is_correct': true,
-                  'order': e.key + 1,
-                })
-            .toList();
-        break;
       default:
         answersData = _answers
             .where((a) => a.controller.text.trim().isNotEmpty)
@@ -272,7 +247,6 @@ class _CreateQuizPageState extends State<CreateQuizPage> {
   // Clear current question inputs
   void _clearCurrentQuestion() {
     _questionController.clear();
-    _textAnswerController.clear();
     _vraiFauxAnswer = null;
     
     for (final a in _answers) {
@@ -529,8 +503,6 @@ class _CreateQuizPageState extends State<CreateQuizPage> {
     switch (_quizType) {
       case QuizType.vraiFaux:
         return _buildVraiFauxSection();
-      case QuizType.texteLibre:
-        return _buildTexteLibreSection();
       case QuizType.quiz:
         return _buildAnswerList(showCorrect: true);
     }
@@ -596,54 +568,6 @@ class _CreateQuizPageState extends State<CreateQuizPage> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // Texte libre
-
-  Widget _buildTexteLibreSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Réponse(s) correcte(s) acceptée(s)',
-            style: TextStyle(
-                fontSize: 12,
-                color: Color(0xFF999999),
-                fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _textAnswerController,
-            maxLines: 3,
-            decoration: InputDecoration(
-              hintText: 'ex: Paris, paris, PARIS',
-              hintStyle: const TextStyle(color: Color(0xFFBBBBBB)),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(
-                    color: Color(0xFFE0E0E0)),
-              ),
-              contentPadding: const EdgeInsets.all(12),
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Sépare les variantes acceptées par une virgule',
-            style: TextStyle(fontSize: 11, color: Color(0xFFBBBBBB)),
-          ),
-        ],
       ),
     );
   }
@@ -849,6 +773,56 @@ class _CreateQuizPageState extends State<CreateQuizPage> {
               ),
             ),
           ],
+          const Divider(height: 1),
+          _paramRow(
+            'Visibilité',
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFDDDDDD)),
+              ),
+              child: Row(
+                children: [
+                  _accessToggle('Public', true),
+                  _accessToggle('Classe', false),
+                ],
+              ),
+            ),
+          ),
+          if (!_isPublic) ...[
+            const Divider(height: 1),
+            _paramRow(
+              'Participants max',
+              Row(
+                children: [
+                  const Icon(Icons.people,
+                      size: 16, color: Color(0xFF888888)),
+                  const SizedBox(width: 6),
+                  SizedBox(
+                    width: 60,
+                    child: TextField(
+                      textAlign: TextAlign.center,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        isDense: true,
+                      ),
+                      keyboardType: TextInputType.number,
+                      controller:
+                          TextEditingController(text: _maxParticipants.toString()),
+                      onChanged: (v) {
+                        final value = int.tryParse(v);
+                        if (value != null && value > 0) {
+                          _maxParticipants = value;
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -912,6 +886,39 @@ class _CreateQuizPageState extends State<CreateQuizPage> {
             fontWeight: FontWeight.w500,
             color: active ? Colors.white : const Color(0xFF666666),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _accessToggle(String label, bool isPublic) {
+    final active = _isPublic == isPublic;
+    return GestureDetector(
+      onTap: () => setState(() => _isPublic = isPublic),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: active ? AppTheme.primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isPublic ? Icons.public : Icons.group,
+              size: 14,
+              color: active ? Colors.white : const Color(0xFF666666),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: active ? Colors.white : const Color(0xFF666666),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1055,7 +1062,8 @@ class _CreateQuizPageState extends State<CreateQuizPage> {
         quizType: _quizType.serviceKey,
         timeLimit: _timeLimit,
         pointsType: _pointsType,
-        isPublic: true,
+        isPublic: _isPublic,
+        maxParticipants: _isPublic ? null : _maxParticipants,
         answerLimit: _answerLimitType == AnswerLimitType.single ? 1 : _answers.length,
         questions: _savedQuestions,
       );

@@ -10,6 +10,10 @@ class Quiz {
   final int answerLimit;
   final String status;
   final String? pinCode;
+  final int? maxParticipants;
+  final int currentParticipants;
+  final String sessionStatus;
+  final String? startedBy;
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<Question>? questions;
@@ -26,6 +30,10 @@ class Quiz {
     required this.answerLimit,
     required this.status,
     this.pinCode,
+    this.maxParticipants,
+    this.currentParticipants = 0,
+    this.sessionStatus = 'waiting',
+    this.startedBy,
     required this.createdAt,
     required this.updatedAt,
     this.questions,
@@ -44,6 +52,10 @@ class Quiz {
       answerLimit: json['answer_limit'] as int,
       status: json['status'] as String,
       pinCode: json['pin_code'] as String?,
+      maxParticipants: json['max_participants'] as int?,
+      currentParticipants: json['current_participants'] as int? ?? 0,
+      sessionStatus: json['session_status'] as String? ?? 'waiting',
+      startedBy: json['started_by'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
       questions: json['questions'] != null
@@ -67,6 +79,10 @@ class Quiz {
       'answer_limit': answerLimit,
       'status': status,
       'pin_code': pinCode,
+      'max_participants': maxParticipants,
+      'current_participants': currentParticipants,
+      'session_status': sessionStatus,
+      'started_by': startedBy,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };

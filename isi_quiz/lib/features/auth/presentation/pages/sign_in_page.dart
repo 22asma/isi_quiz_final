@@ -43,6 +43,7 @@ class _SignInPageState extends State<SignInPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -78,8 +79,8 @@ class _SignInPageState extends State<SignInPage> {
             );
           }
         },
-        child: SafeArea(
-          child: Padding(
+        child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.all(AppConstants.defaultPadding),
             child: Form(
               key: _formKey,
@@ -228,7 +229,6 @@ class _SignInPageState extends State<SignInPage> {
                   ),
                 ],
               ),
-            ),
           ),
         ),
       ),

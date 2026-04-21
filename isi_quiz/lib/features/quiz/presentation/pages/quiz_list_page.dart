@@ -3,13 +3,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:isi_quiz/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:isi_quiz/features/auth/presentation/bloc/auth_state.dart';
 import 'package:isi_quiz/features/quiz/services/quiz_service.dart';
-import '../../../../core/theme/app_theme.dart';
 import '../../../../core/constants/app_constants.dart';
 
 class QuizListPage extends StatefulWidget {
-  const QuizListPage({super.key, this.refreshNotifier});
+  const QuizListPage({
+    super.key,
+    this.refreshNotifier,
+    this.initialTabIndex = 0,
+  });
 
   final ValueNotifier<bool>? refreshNotifier;
+  final int initialTabIndex;
 
   @override
   State<QuizListPage> createState() => QuizListPageState();
@@ -25,18 +29,29 @@ class QuizListPageState extends State<QuizListPage>
   List<Map<String, dynamic>> _publicQuizzes = [];
   bool _isLoading = true;
 
+  // ── Palette commune ────────────────────────────────────────────────────────
   static const Color primaryColor   = Color(0xFF003366);
   static const Color secondaryColor = Color(0xFF4A5F70);
   static const Color tertiaryColor  = Color(0xFF592300);
   static const Color neutralColor   = Color(0xFFF5F5F5);
+
+  /// Méthode publique appelée depuis MainNavigationPage via GlobalKey
+  /// pour forcer le changement de sous-onglet (0 = Mes Quiz, 1 = Quiz Publics)
+  void switchTab(int index) {
+    if (_tabController.index != index) {
+      _tabController.animateTo(index);
+    }
+  }
 
   Future<void> refresh() async => _loadQuizzes();
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _refreshNotifier = widget.refreshNotifier ?? ValueNotifier<bool>(false);
+    _tabController = TabController(
+        length: 2, vsync: this, initialIndex: widget.initialTabIndex);
+    _refreshNotifier =
+        widget.refreshNotifier ?? ValueNotifier<bool>(false);
     _ownsRefreshNotifier = widget.refreshNotifier == null;
     _loadQuizzes();
     _refreshNotifier.addListener(_onRefreshRequested);
@@ -57,7 +72,8 @@ class QuizListPageState extends State<QuizListPage>
     try {
       final authState = context.read<AuthBloc>().state;
       if (authState is Authenticated) {
-        final myQuizzes = await _quizService.getUserQuizzes(authState.user.id);
+        final myQuizzes =
+            await _quizService.getUserQuizzes(authState.user.id);
         final publicQuizzes = await _quizService.getPublicQuizzes();
         setState(() {
           _myQuizzes = myQuizzes;
@@ -111,18 +127,21 @@ class QuizListPageState extends State<QuizListPage>
                         ),
                         GestureDetector(
                           onTap: () async {
-                            final result = await Navigator.pushNamed(context, '/create-quiz');
+                            final result = await Navigator.pushNamed(
+                                context, '/create-quiz');
                             if (result == true) _loadQuizzes();
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 8),
                             decoration: BoxDecoration(
                               color: tertiaryColor,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Row(
                               children: [
-                                Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                                Icon(Icons.add_rounded,
+                                    color: Colors.white, size: 18),
                                 SizedBox(width: 6),
                                 Text(
                                   'Créer',
@@ -147,8 +166,10 @@ class QuizListPageState extends State<QuizListPage>
                     unselectedLabelColor: Colors.white54,
                     indicatorColor: tertiaryColor,
                     indicatorWeight: 3,
-                    labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                    unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                    labelStyle: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 14),
+                    unselectedLabelStyle: const TextStyle(
+                        fontWeight: FontWeight.w500, fontSize: 14),
                     tabs: const [
                       Tab(text: 'Mes Quiz'),
                       Tab(text: 'Quiz Publics'),
@@ -159,7 +180,7 @@ class QuizListPageState extends State<QuizListPage>
             ),
           ),
 
-          // ── Body ───────────────────────────────────────────────────────
+          // ── Corps ───────────────────────────────────────────────────────
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -176,7 +197,8 @@ class QuizListPageState extends State<QuizListPage>
 
   Widget _buildMyQuizzesTab() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFF003366)));
+      return const Center(
+          child: CircularProgressIndicator(color: primaryColor));
     }
     if (_myQuizzes.isEmpty) {
       return _buildEmptyState(
@@ -188,13 +210,15 @@ class QuizListPageState extends State<QuizListPage>
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
       itemCount: _myQuizzes.length,
-      itemBuilder: (context, index) => _buildQuizCard(_myQuizzes[index], isMyQuiz: true),
+      itemBuilder: (context, index) =>
+          _buildQuizCard(_myQuizzes[index], isMyQuiz: true),
     );
   }
 
   Widget _buildPublicQuizzesTab() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFF003366)));
+      return const Center(
+          child: CircularProgressIndicator(color: primaryColor));
     }
     if (_publicQuizzes.isEmpty) {
       return _buildEmptyState(
@@ -206,34 +230,39 @@ class QuizListPageState extends State<QuizListPage>
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
       itemCount: _publicQuizzes.length,
-      itemBuilder: (context, index) => _buildQuizCard(_publicQuizzes[index], isMyQuiz: false),
+      itemBuilder: (context, index) =>
+          _buildQuizCard(_publicQuizzes[index], isMyQuiz: false),
     );
   }
 
-  Widget _buildEmptyState(String title, String subtitle, IconData icon) {
+  Widget _buildEmptyState(
+      String title, String subtitle, IconData icon) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 90,
-            height: 90,
+            width: 90, height: 90,
             decoration: BoxDecoration(
-              color: const Color(0xFF003366).withOpacity(0.07),
+              color: primaryColor.withOpacity(0.07),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 44, color: const Color(0xFF003366).withOpacity(0.3)),
+            child: Icon(icon,
+                size: 44, color: primaryColor.withOpacity(0.3)),
           ),
           const SizedBox(height: 20),
           Text(title,
               style: const TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF003366)),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: primaryColor),
               textAlign: TextAlign.center),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(subtitle,
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                style:
+                    TextStyle(fontSize: 14, color: Colors.grey.shade500),
                 textAlign: TextAlign.center),
           ),
         ],
@@ -241,11 +270,18 @@ class QuizListPageState extends State<QuizListPage>
     );
   }
 
-  Widget _buildQuizCard(Map<String, dynamic> quiz, {required bool isMyQuiz}) {
+  Widget _buildQuizCard(Map<String, dynamic> quiz,
+      {required bool isMyQuiz}) {
     final pinCode = quiz['pin_code'] as String?;
-    final questionCount =
-        quiz['questions'] != null ? (quiz['questions'] as List).length : 0;
+    final questionCount = quiz['questions'] != null
+        ? (quiz['questions'] as List).length
+        : 0;
     final isPublic = quiz['is_public'] == true;
+    final maxParticipants = quiz['max_participants'] as int?;
+    final currentParticipants =
+        quiz['current_participants'] as int? ?? 0;
+    final sessionStatus =
+        quiz['session_status'] as String? ?? 'waiting';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -268,10 +304,8 @@ class QuizListPageState extends State<QuizListPage>
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Color accent
                 Container(
-                  width: 4,
-                  height: 48,
+                  width: 4, height: 48,
                   decoration: BoxDecoration(
                     color: isMyQuiz ? primaryColor : secondaryColor,
                     borderRadius: BorderRadius.circular(4),
@@ -292,17 +326,20 @@ class QuizListPageState extends State<QuizListPage>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        quiz['description'] as String? ?? 'Pas de description',
-                        style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                        quiz['description'] as String? ??
+                            'Pas de description',
+                        style: TextStyle(
+                            fontSize: 13, color: Colors.grey.shade500),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-                if (isMyQuiz && pinCode != null)
+                if (pinCode != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: primaryColor,
                       borderRadius: BorderRadius.circular(8),
@@ -310,7 +347,9 @@ class QuizListPageState extends State<QuizListPage>
                     child: Text(
                       'PIN: $pinCode',
                       style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12),
                     ),
                   ),
               ],
@@ -320,33 +359,96 @@ class QuizListPageState extends State<QuizListPage>
             const SizedBox(height: 12),
             Row(
               children: [
-                _buildInfoChip(quiz['quiz_type'] as String? ?? 'Quiz', Icons.category_outlined),
+                _buildInfoChip(
+                    quiz['quiz_type'] as String? ?? 'Quiz',
+                    Icons.category_outlined),
                 const SizedBox(width: 8),
-                _buildInfoChip('$questionCount questions', Icons.help_outline),
+                _buildInfoChip(
+                    '$questionCount questions', Icons.help_outline),
                 const SizedBox(width: 8),
                 _buildInfoChip(
                   '${quiz['time_limit']?.toString() ?? '20'}s',
                   Icons.timer_outlined,
                 ),
                 const Spacer(),
-                Icon(
-                  isPublic ? Icons.public_rounded : Icons.lock_rounded,
-                  size: 14,
-                  color: isPublic ? Colors.green.shade600 : Colors.orange.shade600,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  isPublic ? 'Public' : 'Privé',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: isPublic ? Colors.green.shade600 : Colors.orange.shade600,
-                  ),
+                Row(
+                  children: [
+                    Icon(
+                      isPublic
+                          ? Icons.public_rounded
+                          : Icons.group_rounded,
+                      size: 14,
+                      color: isPublic
+                          ? Colors.green.shade600
+                          : Colors.blue.shade600,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      isPublic ? 'Public' : 'Classe',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isPublic
+                            ? Colors.green.shade600
+                            : Colors.blue.shade600,
+                      ),
+                    ),
+                    if (!isPublic && maxParticipants != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border:
+                              Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Text(
+                          '$currentParticipants/$maxParticipants',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue.shade700,
+                          ),
+                        ),
+                      ),
+                      if (sessionStatus != 'waiting') ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: sessionStatus == 'started'
+                                ? Colors.green.shade50
+                                : Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: sessionStatus == 'started'
+                                  ? Colors.green.shade200
+                                  : Colors.orange.shade200,
+                            ),
+                          ),
+                          child: Text(
+                            sessionStatus == 'started'
+                                ? 'En cours'
+                                : 'Terminé',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: sessionStatus == 'started'
+                                  ? Colors.green.shade700
+                                  : Colors.orange.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ],
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            // Ranking button
             SizedBox(
               width: double.infinity,
               height: 40,
@@ -364,11 +466,13 @@ class QuizListPageState extends State<QuizListPage>
                 icon: const Icon(Icons.leaderboard_outlined, size: 18),
                 label: const Text(
                   'Voir le classement',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w600),
                 ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: primaryColor,
-                  side: BorderSide(color: primaryColor.withOpacity(0.3)),
+                  side: BorderSide(
+                      color: primaryColor.withOpacity(0.3)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -394,19 +498,12 @@ class QuizListPageState extends State<QuizListPage>
           Icon(icon, size: 12, color: secondaryColor),
           const SizedBox(width: 4),
           Text(label,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: secondaryColor)),
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: secondaryColor)),
         ],
       ),
     );
-  }
-
-  String _formatDate(dynamic date) {
-    if (date == null) return 'Date inconnue';
-    try {
-      final d = DateTime.parse(date.toString());
-      return '${d.day}/${d.month}/${d.year}';
-    } catch (_) {
-      return 'Date inconnue';
-    }
   }
 }

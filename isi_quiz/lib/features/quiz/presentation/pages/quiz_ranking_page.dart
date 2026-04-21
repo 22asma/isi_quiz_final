@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../../core/theme/app_theme.dart';
 
 class QuizRankingPage extends StatefulWidget {
   const QuizRankingPage({super.key});
@@ -16,6 +15,7 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
   bool _isLoading = true;
   bool _isMyQuiz = false;
 
+  // ── Palette commune ────────────────────────────────────────────────────────
   static const Color primaryColor   = Color(0xFF003366);
   static const Color secondaryColor = Color(0xFF4A5F70);
   static const Color tertiaryColor  = Color(0xFF592300);
@@ -24,7 +24,8 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     if (args != null && _quizData == null) {
       _quizData = args['quiz'] as Map<String, dynamic>;
       _isMyQuiz = args['isMyQuiz'] as bool? ?? false;
@@ -35,8 +36,6 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
   Future<void> _loadRankings() async {
     try {
       if (_quizData == null) return;
-
-      // First get quiz sessions for this quiz
       final sessionsResponse = await _supabase
           .from('quiz_sessions')
           .select('id')
@@ -50,9 +49,9 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
         return;
       }
 
-      final sessionIds = sessionsResponse.map((s) => s['id'] as String).toList();
+      final sessionIds =
+          sessionsResponse.map((s) => s['id'] as String).toList();
 
-      // Then get results for these sessions
       final response = await _supabase
           .from('quiz_results')
           .select('''
@@ -86,72 +85,60 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
     try {
       final date = DateTime.parse(dateString);
       return '${date.day}/${date.month}/${date.year}';
-    } catch (e) {
+    } catch (_) {
       return 'Date inconnue';
-    }
-  }
-
-  String _getRankBadge(int rank) {
-    switch (rank) {
-      case 1:
-        return '1er';
-      case 2:
-        return '2ème';
-      case 3:
-        return '3ème';
-      default:
-        return '${rank}ème';
     }
   }
 
   Color _getRankColor(int rank) {
     switch (rank) {
-      case 1:
-        return Colors.amber;
-      case 2:
-        return Colors.grey;
-      case 3:
-        return Colors.brown;
-      default:
-        return primaryColor;
+      case 1: return const Color(0xFFFFB300); // Ambre
+      case 2: return const Color(0xFF78909C); // Gris-bleu
+      case 3: return const Color(0xFF8D6E63); // Brun
+      default: return primaryColor;
     }
   }
 
   Widget _getRankIcon(int rank) {
-    switch (rank) {
-      case 1:
-        return const Icon(Icons.emoji_events, color: Colors.amber, size: 24);
-      case 2:
-        return const Icon(Icons.emoji_events, color: Colors.grey, size: 24);
-      case 3:
-        return const Icon(Icons.emoji_events, color: Colors.brown, size: 24);
-      default:
-        return Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: primaryColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Text(
-              '$rank',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        );
+    if (rank <= 3) {
+      return Container(
+        width: 40, height: 40,
+        decoration: BoxDecoration(
+          color: _getRankColor(rank).withOpacity(0.15),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          Icons.emoji_events_rounded,
+          color: _getRankColor(rank),
+          size: 22,
+        ),
+      );
     }
+    return Container(
+      width: 40, height: 40,
+      decoration: BoxDecoration(
+        color: primaryColor.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: Text(
+          '$rank',
+          style: const TextStyle(
+            color: primaryColor,
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     if (_quizData == null) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        backgroundColor: neutralColor,
+        body: Center(child: CircularProgressIndicator(color: primaryColor)),
       );
     }
 
@@ -159,63 +146,88 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
       backgroundColor: neutralColor,
       body: Column(
         children: [
-          // Header
+          // ── Header foncé ─────────────────────────────────────────────────
           Container(
             color: primaryColor,
             child: SafeArea(
               bottom: false,
-              child: Column(
+              child: Stack(
                 children: [
-                  // Back button
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 12, 16, 0),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                              color: Colors.white, size: 20),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            _isMyQuiz ? 'Mon Quiz' : 'Quiz Public',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ],
+                  Positioned(
+                    top: -40, right: -40,
+                    child: Container(
+                      width: 160, height: 160,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.05),
+                      ),
                     ),
                   ),
-                  // Quiz info
+                  Positioned(
+                    top: 20, right: 20,
+                    child: Container(
+                      width: 60, height: 60,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.07),
+                      ),
+                    ),
+                  ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+                    padding: const EdgeInsets.fromLTRB(8, 12, 16, 28),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          _quizData!['title'] as String? ?? 'Quiz',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.5,
-                          ),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  color: Colors.white, size: 20),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                _isMyQuiz ? 'Mon Quiz' : 'Quiz Public',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Classement des participants',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.65),
-                            fontSize: 14,
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _quizData!['title'] as String? ?? 'Quiz',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Classement des participants',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.65),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -226,9 +238,9 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
             ),
           ),
 
-          // Stats bar
-          Container(
-            padding: const EdgeInsets.all(20),
+          // ── Stats bar ─────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
             child: Row(
               children: [
                 _buildStatCard(
@@ -255,138 +267,137 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
             ),
           ),
 
-          // Rankings list
+          // ── Liste classements ─────────────────────────────────────────────
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: primaryColor))
+                ? const Center(
+                    child: CircularProgressIndicator(color: primaryColor))
                 : _rankings.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 90,
-                              height: 90,
-                              decoration: BoxDecoration(
-                                color: primaryColor.withOpacity(0.07),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.leaderboard_outlined, 
-                                  size: 44, 
-                                  color: primaryColor.withOpacity(0.3)),
-                            ),
-                            const SizedBox(height: 20),
-                            Text(
-                              'Aucun participant',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: primaryColor,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 40),
-                              child: Text(
-                                'Soyez le premier à compléter ce quiz !',
-                                style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
+                    ? _buildEmptyState()
                     : RefreshIndicator(
                         onRefresh: _loadRankings,
+                        color: primaryColor,
                         child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          padding:
+                              const EdgeInsets.fromLTRB(20, 16, 20, 24),
                           itemCount: _rankings.length,
-                          itemBuilder: (context, index) {
-                            final ranking = _rankings[index];
-                            final rank = index + 1;
-                            final profile = ranking['profiles'] as Map<String, dynamic>? ?? {};
-                            
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: primaryColor.withOpacity(0.06),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Row(
-                                  children: [
-                                    // Rank
-                                    _getRankIcon(rank),
-                                    const SizedBox(width: 16),
-                                    // User info
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            ranking['profiles']?['full_name'] as String? ?? 'Participant #$rank',
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: primaryColor,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            ranking['profiles']?['email'] as String? ?? 'email@exemple.com',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    // Score info
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: [
-                                        Text(
-                                          '${ranking['percentage']?.toStringAsFixed(1)}%',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: _getRankColor(rank),
-                                          ),
-                                        ),
-                                        Text(
-                                          '${ranking['total_score']}/${ranking['max_possible_score']}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                        Text(
-                                          _formatDate(ranking['completed_at'] as String? ?? ''),
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.grey[500],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
+                          itemBuilder: (context, index) =>
+                              _buildRankCard(_rankings[index], index + 1),
                         ),
                       ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Widgets helpers ────────────────────────────────────────────────────────
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 90, height: 90,
+            decoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.07),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.leaderboard_outlined,
+                size: 44, color: primaryColor.withOpacity(0.3)),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Aucun participant',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: primaryColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              'Soyez le premier à compléter ce quiz !',
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRankCard(Map<String, dynamic> ranking, int rank) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            _getRankIcon(rank),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    ranking['profiles']?['full_name'] as String? ??
+                        'Participant #$rank',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: primaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    ranking['profiles']?['email'] as String? ??
+                        'email@exemple.com',
+                    style:
+                        TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${(ranking['percentage'] as num?)?.toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: _getRankColor(rank),
+                  ),
+                ),
+                Text(
+                  '${ranking['total_score']}/${ranking['max_possible_score']}',
+                  style:
+                      TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                ),
+                Text(
+                  _formatDate(ranking['completed_at'] as String? ?? ''),
+                  style:
+                      TextStyle(fontSize: 11, color: Colors.grey.shade400),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -399,7 +410,7 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
   }) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -413,14 +424,21 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
         ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 6),
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 18),
+            ),
+            const SizedBox(height: 8),
             Text(
               value,
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
-                color: color,
+                color: primaryColor,
               ),
             ),
             const SizedBox(height: 2),
@@ -428,7 +446,7 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
               label,
               style: TextStyle(
                 fontSize: 10,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 color: Colors.grey.shade500,
                 letterSpacing: 0.3,
               ),
