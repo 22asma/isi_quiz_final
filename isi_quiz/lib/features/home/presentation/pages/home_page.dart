@@ -282,42 +282,88 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildPinRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: List.generate(6, (index) {
-        final isFocused = _focusNodes[index].hasFocus;
-        return SizedBox(
-          width: 54, height: 62,
-          child: TextField(
-            controller: _pinControllers[index],
-            focusNode: _focusNodes[index],
-            textAlign: TextAlign.center,
-            keyboardType: TextInputType.number,
-            maxLength: 1,
-            onChanged: (v) => _onPinChanged(v, index),
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800,
-                color: _hasError ? Colors.red : primaryColor),
-            decoration: InputDecoration(
-              counterText: '',
-              filled: true,
-              fillColor: _hasError
-                  ? Colors.red.withOpacity(0.1)
-                  : isFocused ? primaryColor.withOpacity(0.1) : const Color(0xFFF0F3F8),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: _hasError ? Colors.red : Colors.transparent, width: _hasError ? 2 : 0),
+  return Column(
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(6, (index) {
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: 48,
+            height: 58,
+            decoration: BoxDecoration(
+              color: _hasError
+                  ? Colors.red.withOpacity(0.08)
+                  : _pinControllers[index].text.isNotEmpty
+                      ? primaryColor.withOpacity(0.08)
+                      : const Color(0xFFF0F3F8),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: _hasError
+                    ? Colors.red.shade400
+                    : _focusNodes[index].hasFocus
+                        ? primaryColor
+                        : _pinControllers[index].text.isNotEmpty
+                            ? primaryColor.withOpacity(0.4)
+                            : Colors.transparent,
+                width: _hasError || _focusNodes[index].hasFocus ? 2 : 1,
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: _hasError ? Colors.red : primaryColor, width: 2),
-              ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 8),
+              boxShadow: _focusNodes[index].hasFocus
+                  ? [
+                      BoxShadow(
+                        color: primaryColor.withOpacity(0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      )
+                    ]
+                  : [],
             ),
-          ),
-        );
-      }),
-    );
-  }
+            child: TextField(
+              controller: _pinControllers[index],
+              focusNode: _focusNodes[index],
+              textAlign: TextAlign.center,
+              keyboardType: TextInputType.number,
+              maxLength: 1,
+              onChanged: (v) => _onPinChanged(v, index),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                color: _hasError ? Colors.red.shade600 : primaryColor,
+                letterSpacing: 0,
+              ),
+              decoration: const InputDecoration(
+                counterText: '',
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(vertical: 10),
+              ),
+            ),
+          );
+        }),
+      ),
+      const SizedBox(height: 8),
+      // Indicateur de progression
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(6, (index) {
+          final filled = _pinControllers[index].text.isNotEmpty;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 48,
+            height: 3,
+            decoration: BoxDecoration(
+              color: _hasError
+                  ? Colors.red.shade400
+                  : filled
+                      ? primaryColor
+                      : Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          );
+        }),
+      ),
+    ],
+  );
+}
 
   Widget _buildErrorBanner() {
     return Container(

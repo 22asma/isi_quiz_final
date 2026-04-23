@@ -5,6 +5,7 @@ import 'package:isi_quiz/features/home/presentation/pages/main_navigation_page.d
 import 'package:isi_quiz/features/profile/presentation/pages/profile_page.dart';
 import 'package:isi_quiz/features/quiz/presentation/pages/quiz_list_page.dart';
 import 'package:isi_quiz/features/quiz/presentation/create_quiz_page.dart';
+import 'package:isi_quiz/features/quiz/presentation/edit_quiz_page.dart';
 import 'package:isi_quiz/features/quiz/presentation/pages/quiz_ranking_page.dart';
 import 'package:isi_quiz/features/quiz/presentation/pages/quiz_results_page.dart';
 import 'package:isi_quiz/features/ranks/presentation/pages/ranks_page.dart';
@@ -34,7 +35,7 @@ void main() async {
   
   // Initialiser les dépendances
   final supabaseClient = Supabase.instance.client;
-  final authRemoteDataSource = AuthRemoteDataSourceImpl(client: supabaseClient);
+  final authRemoteDataSource = AuthRemoteDataSourceImpl(supabaseClient: supabaseClient);
   final authRepository = AuthRepositoryImpl(remoteDataSource: authRemoteDataSource);
   final signInUseCase = SignInUseCase(authRepository);
   final signUpUseCase = SignUpUseCase(authRepository);
@@ -80,6 +81,10 @@ class MyApp extends StatelessWidget {
           AppConstants.homeRoute: (context) => const MainNavigationPage(),
           '/quiz': (context) => const QuizListPage(),
           '/create-quiz': (context) => const CreateQuizPage(),
+          '/edit-quiz': (context) {
+            final quiz = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+            return EditQuizPage(quiz: quiz ?? {});
+          },
           '/quiz-results': (context) => const QuizResultsPage(),
           '/quiz-ranking': (context) => const QuizRankingPage(),
           '/ranks': (context) => const RanksPage(),

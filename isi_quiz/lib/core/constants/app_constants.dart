@@ -1,6 +1,6 @@
 class AppConstants {
   // Supabase Configuration
-  static const String supabaseUrl = 'http://10.0.2.2:54321';
+  static const String supabaseUrl = 'http://127.0.0.1:54321';
   static const String supabaseAnonKey = '625729a08b95bf1b7ff351a663f3a23c';
   
   // App Configuration

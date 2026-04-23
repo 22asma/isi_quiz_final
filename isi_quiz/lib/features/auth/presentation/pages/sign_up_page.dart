@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:isi_quiz/features/auth/presentation/pages/email_verification_page.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_state.dart';
 import '../bloc/auth_event.dart';
@@ -84,24 +85,26 @@ class _SignUpPageState extends State<SignUpPage> {
           ),
         ),
       ),
-      body: BlocListener<AuthBloc, AuthStatus>(
-        listener: (context, state) {
-          if (state is Authenticated) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Account created successfully!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          } else if (state is AuthError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppTheme.errorColor,
-              ),
-            );
-          }
-        },
+       body: BlocListener<AuthBloc, AuthStatus>(
+  listener: (context, state) {
+    if (state is Authenticated) {
+      Navigator.pushReplacementNamed(context, AppConstants.homeRoute);
+    } else if (state is EmailNotVerified) {  // ✅ AJOUTÉ
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => EmailVerificationPage(email: state.email),
+        ),
+      );
+    } else if (state is AuthError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(state.message),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+    }
+      },
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(AppConstants.defaultPadding),
@@ -459,4 +462,5 @@ class _SignUpPageState extends State<SignUpPage> {
       ),
     );
   }
+  
 }

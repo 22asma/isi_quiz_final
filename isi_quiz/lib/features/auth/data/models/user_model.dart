@@ -1,6 +1,9 @@
 import '../../domain/entities/user.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 class UserModel extends User {
+  final bool isEmailVerified;
+
   const UserModel({
     required super.id,
     required super.email,
@@ -10,26 +13,41 @@ class UserModel extends User {
     super.role,
     super.createdAt,
     super.updatedAt,
+    this.isEmailVerified = false,
   });
 
-  factory UserModel.fromJson(Map<String, dynamic> json) {
+  factory UserModel.fromSupabaseUser(supabase.User user) {
     return UserModel(
-      id: json['id'] as String,
-      email: json['email'] as String,
-      fullName: json['full_name'] as String?,
-      university: json['university'] as String?,
-      institute: json['institute'] as String?,
-      role: json['role'] as String?,
-      createdAt: json['created_at'] != null 
-          ? DateTime.parse(json['created_at'] as String)
+      id: user.id,
+      email: user.email ?? '',
+      fullName: user.userMetadata?['full_name'],
+      university: user.userMetadata?['university'],
+      institute: user.userMetadata?['institute'],
+      role: user.userMetadata?['role'] ?? 'Student',
+      createdAt: DateTime.tryParse(user.createdAt),
+      isEmailVerified: user.emailConfirmedAt != null,
+    );
+  }
+
+  factory UserModel.fromProfileMap(Map<String, dynamic> map) {
+    return UserModel(
+      id: map['id'],
+      email: map['email'],
+      fullName: map['full_name'],
+      university: map['university'],
+      institute: map['institute'],
+      role: map['role'] ?? 'Student',
+      isEmailVerified: map['is_email_verified'] ?? false,
+      createdAt: map['created_at'] != null
+          ? DateTime.tryParse(map['created_at'])
           : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
+      updatedAt: map['updated_at'] != null
+          ? DateTime.tryParse(map['updated_at'])
           : null,
     );
   }
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toMap() {
     return {
       'id': id,
       'email': email,
@@ -37,25 +55,7 @@ class UserModel extends User {
       'university': university,
       'institute': institute,
       'role': role,
-      'created_at': createdAt?.toIso8601String(),
-      'updated_at': updatedAt?.toIso8601String(),
+      'is_email_verified': isEmailVerified,
     };
-  }
-
-  factory UserModel.fromSupabaseUser(Map<String, dynamic> user, Map<String, dynamic>? metadata) {
-    return UserModel(
-      id: user['id'] as String,
-      email: user['email'] as String,
-      fullName: metadata?['full_name'] as String?,
-      university: metadata?['university'] as String?,
-      institute: metadata?['institute'] as String?,
-      role: metadata?['role'] as String?,
-      createdAt: user['created_at'] != null 
-          ? DateTime.parse(user['created_at'] as String)
-          : null,
-      updatedAt: user['updated_at'] != null
-          ? DateTime.parse(user['updated_at'] as String)
-          : null,
-    );
   }
 }

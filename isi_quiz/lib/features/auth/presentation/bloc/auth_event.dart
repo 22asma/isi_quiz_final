@@ -10,7 +10,6 @@ abstract class AuthEvent extends Equatable {
 class SignInEvent extends AuthEvent {
   final String email;
   final String password;
-
   const SignInEvent({required this.email, required this.password});
 
   @override
@@ -40,8 +39,16 @@ class SignUpEvent extends AuthEvent {
 
 class ResetPasswordEvent extends AuthEvent {
   final String email;
-
   const ResetPasswordEvent({required this.email});
+
+  @override
+  List<Object?> get props => [email];
+}
+
+// Nouveau
+class ResendVerificationEmailEvent extends AuthEvent {
+  final String email;
+  const ResendVerificationEmailEvent({required this.email});
 
   @override
   List<Object?> get props => [email];

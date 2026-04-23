@@ -14,7 +14,6 @@ class AuthLoading extends AuthStatus {}
 
 class Authenticated extends AuthStatus {
   final User user;
-
   const Authenticated(this.user);
 
   @override
@@ -25,7 +24,6 @@ class Unauthenticated extends AuthStatus {}
 
 class AuthError extends AuthStatus {
   final String message;
-
   const AuthError(this.message);
 
   @override
@@ -34,4 +32,22 @@ class AuthError extends AuthStatus {
 
 class AuthPasswordReset extends AuthStatus {
   const AuthPasswordReset();
+}
+
+// Nouveau : email de vérification envoyé après signup
+class EmailVerificationSent extends AuthStatus {
+  final String email;
+  const EmailVerificationSent(this.email);
+
+  @override
+  List<Object?> get props => [email];
+}
+
+// Nouveau : tentative de login avec email non vérifié
+class EmailNotVerified extends AuthStatus {
+  final String email;
+  const EmailNotVerified(this.email);
+
+  @override
+  List<Object?> get props => [email];
 }

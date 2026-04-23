@@ -1,9 +1,10 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:isi_quiz/features/auth/data/models/user_model.dart';
 import 'package:isi_quiz/features/auth/domain/usecases/reset_password_usecase.dart';
 import 'package:isi_quiz/features/auth/domain/usecases/sign_in_usecase.dart';
 import 'package:isi_quiz/features/auth/domain/usecases/sign_up_usecase.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../domain/entities/user.dart' as entity;  // Utilisez un préfixe
+import '../../domain/entities/user.dart' as entity;
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -20,6 +21,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthStatus> {
     on<SignInEvent>(_onSignIn);
     on<SignUpEvent>(_onSignUp);
     on<ResetPasswordEvent>(_onResetPassword);
+    on<ResendVerificationEmailEvent>(_onResendVerification);
     on<SignOutEvent>(_onSignOut);
     on<CheckAuthStatusEvent>(_onCheckAuthStatus);
   }
@@ -31,24 +33,28 @@ class AuthBloc extends Bloc<AuthEvent, AuthStatus> {
         email: event.email,
         password: event.password,
       );
-      
-      if (response.user != null) {
-        final role = response.user!.userMetadata?['role'] ?? 'Student';
-        
-        // Utilisez entity.User au lieu de User
-        final user = entity.User(
-          id: response.user!.id,
-          email: response.user!.email ?? '',
-          fullName: response.user!.userMetadata?['full_name'],
-          university: response.user!.userMetadata?['university'],
-          institute: response.user!.userMetadata?['institute'],
-          role: role,
-        );
-        
-        emit(Authenticated(user));
-      } else {
+
+      if (response.user == null) {
         emit(const AuthError('Sign in failed'));
+        return;
       }
+
+      if (response.user!.emailConfirmedAt == null) {
+        await Supabase.instance.client.auth.signOut();
+        emit(EmailNotVerified(event.email));
+        return;
+      }
+
+      final role = response.user!.userMetadata?['role'] ?? 'Student';
+      final user = entity.User(
+        id: response.user!.id,
+        email: response.user!.email ?? '',
+        fullName: response.user!.userMetadata?['full_name'],
+        university: response.user!.userMetadata?['university'],
+        institute: response.user!.userMetadata?['institute'],
+        role: role,
+      );
+      emit(Authenticated(user));
     } catch (e) {
       emit(AuthError('Sign in failed: $e'));
     }
@@ -56,7 +62,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthStatus> {
 
   Future<void> _onSignUp(SignUpEvent event, Emitter<AuthStatus> emit) async {
     emit(AuthLoading());
-    
+
     final result = await signUpUseCase(
       email: event.email,
       password: event.password,
@@ -65,18 +71,40 @@ class AuthBloc extends Bloc<AuthEvent, AuthStatus> {
       institute: event.institute,
       role: event.role,
     );
-    
+
     result.fold(
       (failure) => emit(AuthError(_mapFailureToMessage(failure))),
-      (user) => emit(Authenticated(user)),
+      (user) {
+        final userModel = user as UserModel;
+        if (!userModel.isEmailVerified) {
+          emit(EmailVerificationSent(event.email));
+        } else {
+          emit(Authenticated(user));
+        }
+      },
     );
   }
 
-  Future<void> _onResetPassword(ResetPasswordEvent event, Emitter<AuthStatus> emit) async {
+  Future<void> _onResendVerification(
+    ResendVerificationEmailEvent event,
+    Emitter<AuthStatus> emit,
+  ) async {
+    try {
+      await Supabase.instance.client.auth.resend(
+        type: OtpType.signup,
+        email: event.email,
+      );
+    } catch (e) {
+      emit(AuthError('Failed to resend email: $e'));
+    }
+  }
+
+  Future<void> _onResetPassword(
+    ResetPasswordEvent event,
+    Emitter<AuthStatus> emit,
+  ) async {
     emit(AuthLoading());
-    
     final result = await resetPasswordUseCase(event.email);
-    
     result.fold(
       (failure) => emit(AuthError(_mapFailureToMessage(failure))),
       (_) => emit(const AuthPasswordReset()),
@@ -88,18 +116,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthStatus> {
     emit(Unauthenticated());
   }
 
-  Future<void> _onCheckAuthStatus(CheckAuthStatusEvent event, Emitter<AuthStatus> emit) async {
+  Future<void> _onCheckAuthStatus(
+    CheckAuthStatusEvent event,
+    Emitter<AuthStatus> emit,
+  ) async {
     final currentUser = Supabase.instance.client.auth.currentUser;
-    if (currentUser != null) {
-      final role = currentUser.userMetadata?['role'] ?? 'Student';
-      // Utilisez entity.User au lieu de User
+    if (currentUser != null && currentUser.emailConfirmedAt != null) {
       final user = entity.User(
         id: currentUser.id,
         email: currentUser.email ?? '',
         fullName: currentUser.userMetadata?['full_name'],
         university: currentUser.userMetadata?['university'],
         institute: currentUser.userMetadata?['institute'],
-        role: role,
+        role: currentUser.userMetadata?['role'] ?? 'Student',
       );
       emit(Authenticated(user));
     } else {

@@ -29,14 +29,11 @@ class QuizListPageState extends State<QuizListPage>
   List<Map<String, dynamic>> _publicQuizzes = [];
   bool _isLoading = true;
 
-  // ── Palette commune ────────────────────────────────────────────────────────
   static const Color primaryColor   = Color(0xFF003366);
   static const Color secondaryColor = Color(0xFF4A5F70);
   static const Color tertiaryColor  = Color(0xFF592300);
   static const Color neutralColor   = Color(0xFFF5F5F5);
 
-  /// Méthode publique appelée depuis MainNavigationPage via GlobalKey
-  /// pour forcer le changement de sous-onglet (0 = Mes Quiz, 1 = Quiz Publics)
   void switchTab(int index) {
     if (_tabController.index != index) {
       _tabController.animateTo(index);
@@ -103,7 +100,7 @@ class QuizListPageState extends State<QuizListPage>
       backgroundColor: neutralColor,
       body: Column(
         children: [
-          // ── Header ─────────────────────────────────────────────────────
+          // Header
           Container(
             color: primaryColor,
             child: SafeArea(
@@ -159,7 +156,6 @@ class QuizListPageState extends State<QuizListPage>
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Tab Bar
                   TabBar(
                     controller: _tabController,
                     labelColor: Colors.white,
@@ -180,7 +176,6 @@ class QuizListPageState extends State<QuizListPage>
             ),
           ),
 
-          // ── Corps ───────────────────────────────────────────────────────
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -235,8 +230,7 @@ class QuizListPageState extends State<QuizListPage>
     );
   }
 
-  Widget _buildEmptyState(
-      String title, String subtitle, IconData icon) {
+  Widget _buildEmptyState(String title, String subtitle, IconData icon) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -247,8 +241,7 @@ class QuizListPageState extends State<QuizListPage>
               color: primaryColor.withOpacity(0.07),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon,
-                size: 44, color: primaryColor.withOpacity(0.3)),
+            child: Icon(icon, size: 44, color: primaryColor.withOpacity(0.3)),
           ),
           const SizedBox(height: 20),
           Text(title,
@@ -261,8 +254,7 @@ class QuizListPageState extends State<QuizListPage>
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(subtitle,
-                style:
-                    TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
                 textAlign: TextAlign.center),
           ),
         ],
@@ -278,10 +270,8 @@ class QuizListPageState extends State<QuizListPage>
         : 0;
     final isPublic = quiz['is_public'] == true;
     final maxParticipants = quiz['max_participants'] as int?;
-    final currentParticipants =
-        quiz['current_participants'] as int? ?? 0;
-    final sessionStatus =
-        quiz['session_status'] as String? ?? 'waiting';
+    final currentParticipants = quiz['current_participants'] as int? ?? 0;
+    final sessionStatus = quiz['session_status'] as String? ?? 'waiting';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -301,6 +291,7 @@ class QuizListPageState extends State<QuizListPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Titre + PIN
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -326,8 +317,7 @@ class QuizListPageState extends State<QuizListPage>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        quiz['description'] as String? ??
-                            'Pas de description',
+                        quiz['description'] as String? ?? 'Pas de description',
                         style: TextStyle(
                             fontSize: 13, color: Colors.grey.shade500),
                         maxLines: 1,
@@ -354,131 +344,177 @@ class QuizListPageState extends State<QuizListPage>
                   ),
               ],
             ),
+
             const SizedBox(height: 14),
             const Divider(height: 1, color: Color(0xFFF0F0F0)),
             const SizedBox(height: 12),
-            Row(
+
+            // ✅ CORRIGÉ : Wrap pour les chips → plus d'overflow
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
               children: [
                 _buildInfoChip(
                     quiz['quiz_type'] as String? ?? 'Quiz',
                     Icons.category_outlined),
-                const SizedBox(width: 8),
                 _buildInfoChip(
                     '$questionCount questions', Icons.help_outline),
-                const SizedBox(width: 8),
                 _buildInfoChip(
                   '${quiz['time_limit']?.toString() ?? '20'}s',
                   Icons.timer_outlined,
                 ),
-                const Spacer(),
-                Row(
-                  children: [
-                    Icon(
-                      isPublic
-                          ? Icons.public_rounded
-                          : Icons.group_rounded,
-                      size: 14,
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            // ✅ CORRIGÉ : Statut sur sa propre ligne → plus d'overflow
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isPublic
+                        ? Colors.green.shade50
+                        : Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
                       color: isPublic
-                          ? Colors.green.shade600
-                          : Colors.blue.shade600,
+                          ? Colors.green.shade200
+                          : Colors.blue.shade200,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      isPublic ? 'Public' : 'Classe',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isPublic
+                            ? Icons.public_rounded
+                            : Icons.group_rounded,
+                        size: 12,
                         color: isPublic
                             ? Colors.green.shade600
                             : Colors.blue.shade600,
                       ),
-                    ),
-                    if (!isPublic && maxParticipants != null) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border:
-                              Border.all(color: Colors.blue.shade200),
-                        ),
-                        child: Text(
-                          '$currentParticipants/$maxParticipants',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.blue.shade700,
-                          ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isPublic ? 'Public' : 'Classe',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: isPublic
+                              ? Colors.green.shade600
+                              : Colors.blue.shade600,
                         ),
                       ),
-                      if (sessionStatus != 'waiting') ...[
-                        const SizedBox(width: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: sessionStatus == 'started'
-                                ? Colors.green.shade50
-                                : Colors.orange.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: sessionStatus == 'started'
-                                  ? Colors.green.shade200
-                                  : Colors.orange.shade200,
-                            ),
-                          ),
-                          child: Text(
-                            sessionStatus == 'started'
-                                ? 'En cours'
-                                : 'Terminé',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: sessionStatus == 'started'
-                                  ? Colors.green.shade700
-                                  : Colors.orange.shade700,
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              height: 40,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.pushNamed(
-                    context,
-                    '/quiz-ranking',
-                    arguments: {
-                      'quiz': quiz,
-                      'isMyQuiz': isMyQuiz,
-                    },
-                  );
-                },
-                icon: const Icon(Icons.leaderboard_outlined, size: 18),
-                label: const Text(
-                  'Voir le classement',
-                  style: TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: primaryColor,
-                  side: BorderSide(
-                      color: primaryColor.withOpacity(0.3)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-              ),
+                if (!isPublic && maxParticipants != null) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.shade200),
+                    ),
+                    child: Text(
+                      '$currentParticipants/$maxParticipants',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+                if (sessionStatus != 'waiting') ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: sessionStatus == 'started'
+                          ? Colors.green.shade50
+                          : Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: sessionStatus == 'started'
+                            ? Colors.green.shade200
+                            : Colors.orange.shade200,
+                      ),
+                    ),
+                    child: Text(
+                      sessionStatus == 'started' ? 'En cours' : 'Terminé',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: sessionStatus == 'started'
+                            ? Colors.green.shade700
+                            : Colors.orange.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
+
+            const SizedBox(height: 12),
+
+            // Boutons
+            if (isMyQuiz) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pushNamed(
+                          context,
+                          '/edit-quiz',
+                          arguments: quiz,
+                        ).then((_) => _loadQuizzes());
+                      },
+                      icon: const Icon(Icons.edit_outlined, size: 16),
+                      label: const Text('Modifier',
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.blue,
+                        side: BorderSide(
+                            color: Colors.blue.withOpacity(0.3)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showDeleteDialog(quiz),
+                      icon: const Icon(Icons.delete_outline, size: 16),
+                      label: const Text('Supprimer',
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: BorderSide(
+                            color: Colors.red.withOpacity(0.3)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
           ],
         ),
       ),
@@ -503,6 +539,55 @@ class QuizListPageState extends State<QuizListPage>
                   fontWeight: FontWeight.w600,
                   color: secondaryColor)),
         ],
+      ),
+    );
+  }
+
+  void _showDeleteDialog(Map<String, dynamic> quiz) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Supprimer le quiz'),
+          content: Text(
+            'Êtes-vous sûr de vouloir supprimer le quiz "${quiz['title']}" ?\n\nCette action est irréversible.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                final success =
+                    await _quizService.deleteQuiz(quiz['id']);
+                if (success) {
+                  _showSnack('Quiz supprimé avec succès');
+                  _loadQuizzes();
+                } else {
+                  _showSnack('Erreur lors de la suppression du quiz',
+                      isError: true);
+                }
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Supprimer'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showSnack(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
