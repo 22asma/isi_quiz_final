@@ -390,6 +390,46 @@ class _EditQuizPageState extends State<EditQuizPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Vérifier si l'utilisateur est un instructor
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! Authenticated || !authState.user.isInstructor) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF5F5F5),
+        appBar: AppBar(
+          backgroundColor: AppTheme.primaryColor,
+          elevation: 0,
+          title: const Text('Accès refusé',
+              style: TextStyle(color: Colors.white)),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.block, size: 64, color: Colors.red),
+              SizedBox(height: 16),
+              Text(
+                'Accès réservé aux instructors',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Seuls les instructors peuvent modifier des quiz',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (!_isInitialized) {
       return Scaffold(
         backgroundColor: const Color(0xFFF5F5F5),

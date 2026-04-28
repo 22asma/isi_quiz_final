@@ -8,6 +8,7 @@ import '../widgets/custom_text_field.dart';
 import '../widgets/enhanced_button.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/constants/app_constants.dart';
+import 'email_verification_page.dart'; // ✅ AJOUTÉ
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
@@ -48,10 +49,6 @@ class _SignInPageState extends State<SignInPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppTheme.primaryColor),
-          onPressed: () => Navigator.pop(context),
-        ),
         title: Text(
           AppConstants.appName,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -64,13 +61,22 @@ class _SignInPageState extends State<SignInPage> {
         listener: (context, state) {
           if (state is Authenticated) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
+              const SnackBar(
                 content: Text('Authentication successful!'),
                 backgroundColor: Colors.green,
               ),
             );
             Navigator.pushReplacementNamed(context, AppConstants.homeRoute);
+          } else if (state is EmailNotVerified) {
+            // ✅ Rediriger vers la page de vérification
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => EmailVerificationPage(email: state.email),
+              ),
+            );
           } else if (state is AuthError) {
+            // ✅ AJOUTÉ
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -80,155 +86,154 @@ class _SignInPageState extends State<SignInPage> {
           }
         },
         child: SingleChildScrollView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: const EdgeInsets.all(AppConstants.defaultPadding),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 20),
-                  
-                  // Welcome Text
-                  Text(
-                    'Welcome Back!',
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      color: AppTheme.primaryColor,
-                      fontWeight: FontWeight.bold,
-                    ),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.all(AppConstants.defaultPadding),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+
+                Text(
+                  'Welcome Back!',
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    color: AppTheme.primaryColor,
+                    fontWeight: FontWeight.bold,
                   ),
-                  
-                  const SizedBox(height: 8),
-                  
-                  Text(
-                    'Sign in to continue to ISI Quiz',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                ),
+
+                const SizedBox(height: 8),
+
+                Text(
+                  'Sign in to continue to ISI Quiz',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+
+                const SizedBox(height: 40),
+
+                CustomTextField(
+                  controller: _emailController,
+                  label: 'University Email',
+                  hintText: 'name@isi.utm.tn',
+                  prefixIcon: FontAwesomeIcons.envelope,
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Please enter your email';
+                    }
+                    if (!RegExp(AppConstants.emailRegex).hasMatch(value!)) {
+                      return 'Please enter a valid email';
+                    }
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 20),
+
+                CustomTextField(
+                  controller: _passwordController,
+                  label: 'Password',
+                  hintText: 'Enter your password',
+                  prefixIcon: FontAwesomeIcons.lock,
+                  obscureText: _obscurePassword,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? FontAwesomeIcons.eyeSlash
+                          : FontAwesomeIcons.eye,
                       color: AppTheme.textSecondary,
                     ),
-                  ),
-                  
-                  const SizedBox(height: 40),
-                  
-                  // Email Field
-                  CustomTextField(
-                    controller: _emailController,
-                    label: 'University Email',
-                    hintText: 'name@isi.utm.tn',
-                    prefixIcon: FontAwesomeIcons.envelope,
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value?.isEmpty ?? true) {
-                        return 'Please enter your email';
-                      }
-                      if (!RegExp(AppConstants.emailRegex).hasMatch(value!)) {
-                        return 'Please enter a valid email';
-                      }
-                      return null;
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
                     },
                   ),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Password Field
-                  CustomTextField(
-                    controller: _passwordController,
-                    label: 'Password',
-                    hintText: 'Enter your password',
-                    prefixIcon: FontAwesomeIcons.lock,
-                    obscureText: _obscurePassword,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? FontAwesomeIcons.eyeSlash : FontAwesomeIcons.eye,
-                        color: AppTheme.textSecondary,
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Please enter your password';
+                    }
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.pushNamed(
+                          context, AppConstants.forgotPasswordRoute);
+                    },
+                    child: Text(
+                      'Forgot Password?',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.w500,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
                     ),
-                    validator: (value) {
-                      if (value?.isEmpty ?? true) {
-                        return 'Please enter your password';
-                      }
-                      return null;
-                    },
                   ),
-                  
-                  const SizedBox(height: 12),
-                  
-                  // Forgot Password
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {
-                        Navigator.pushNamed(context, AppConstants.forgotPasswordRoute);
-                      },
-                      child: Text(
-                        'Forgot Password?',
+                ),
+
+                const SizedBox(height: 30),
+
+                BlocBuilder<AuthBloc, AuthStatus>(
+                  builder: (context, state) {
+                    return EnhancedButton.primary(
+                      text: 'Sign In',
+                      onPressed: state is AuthLoading
+                          ? () {}
+                          : () {
+                              if (_formKey.currentState?.validate() ?? false) {
+                                context.read<AuthBloc>().add(
+                                  SignInEvent(
+                                    email: _emailController.text.trim(),
+                                    password: _passwordController.text,
+                                  ),
+                                );
+                              }
+                            },
+                      isLoading: state is AuthLoading,
+                      icon: FontAwesomeIcons.signIn,
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 30),
+
+                Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Don't have an account? ",
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.primaryColor,
-                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textSecondary,
                         ),
                       ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 30),
-                  
-                  // Sign In Button
-                  BlocBuilder<AuthBloc, AuthStatus>(
-                    builder: (context, state) {
-                      return EnhancedButton.primary(
-                        text: 'Sign In',
-                        onPressed: state is AuthLoading
-                            ? () {}
-                            : () {
-                                if (_formKey.currentState?.validate() ?? false) {
-                                  context.read<AuthBloc>().add(
-                                    SignInEvent(
-                                      email: _emailController.text.trim(),
-                                      password: _passwordController.text,
-                                    ),
-                                  );
-                                }
-                              },
-                        isLoading: state is AuthLoading,
-                        icon: FontAwesomeIcons.signIn,
-                      );
-                    },
-                  ),
-                  
-                  const SizedBox(height: 30),
-                  
-                  // Sign Up Link
-                  Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Don\'t have an account? ',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.textSecondary,
-                          ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pushNamed(
+                              context, AppConstants.signUpRoute);
+                        },
+                        child: Text(
+                          'Sign Up',
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: AppTheme.primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pushNamed(context, AppConstants.signUpRoute);
-                          },
-                          child: Text(
-                            'Sign Up',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.primaryColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

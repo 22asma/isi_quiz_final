@@ -45,13 +45,22 @@ class ResetPasswordEvent extends AuthEvent {
   List<Object?> get props => [email];
 }
 
-// Nouveau
 class ResendVerificationEmailEvent extends AuthEvent {
   final String email;
   const ResendVerificationEmailEvent({required this.email});
 
   @override
   List<Object?> get props => [email];
+}
+
+// ✅ AJOUTÉ : vérification OTP (6 chiffres reçus par email)
+class VerifyOtpEvent extends AuthEvent {
+  final String email;
+  final String token;
+  const VerifyOtpEvent({required this.email, required this.token});
+
+  @override
+  List<Object?> get props => [email, token];
 }
 
 class SignOutEvent extends AuthEvent {}

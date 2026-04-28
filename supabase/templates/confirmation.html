@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+      .container { max-width: 500px; margin: auto; background: white; border-radius: 12px; padding: 32px; }
+      .title { color: #003366; font-size: 24px; font-weight: bold; }
+      .otp-box {
+        margin: 24px 0;
+        padding: 20px;
+        background: #f0f4ff;
+        border: 2px dashed #003366;
+        border-radius: 12px;
+        text-align: center;
+      }
+      .otp-label { color: #666; font-size: 14px; margin-bottom: 8px; }
+      .otp-code {
+        color: #003366;
+        font-size: 42px;
+        font-weight: 900;
+        letter-spacing: 12px;
+      }
+      .footer { margin-top: 24px; color: #999; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <p class="title">ISI Quiz</p>
+      <h2>Confirm Your Email</h2>
+      <p>Enter this code in the ISI Quiz app to verify your email address:</p>
+
+      <div class="otp-box">
+        <p class="otp-label">Your verification code</p>
+        <p class="otp-code">{{ .Token }}</p>
+      </div>
+
+      <p>This code expires in <strong>1 hour</strong>.</p>
+
+      <p class="footer">
+        If you didn't create an account, you can safely ignore this email.
+      </p>
+    </div>
+  </body>
+</html>

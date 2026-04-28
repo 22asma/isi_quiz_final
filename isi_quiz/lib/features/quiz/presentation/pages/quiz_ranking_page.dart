@@ -17,14 +17,12 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
 
   static const Color primary   = Color(0xFF003366);
   static const Color secondary = Color(0xFF4A5F70);
-  static const Color accent    = Color(0xFF592300);
   static const Color bg        = Color(0xFFF5F5F5);
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     if (args != null && _quizData == null) {
       _quizData = args['quiz'] as Map<String, dynamic>;
       _isMyQuiz = args['isMyQuiz'] as bool? ?? false;
@@ -33,6 +31,7 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
   }
 
   Future<void> _loadRankings() async {
+    setState(() => _isLoading = true);
     try {
       if (_quizData == null) return;
 
@@ -42,37 +41,43 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
           .eq('quiz_id', _quizData!['id']);
 
       if (sessionsResponse.isEmpty) {
-        setState(() {
-          _rankings  = [];
-          _isLoading = false;
-        });
+        setState(() { _rankings = []; _isLoading = false; });
         return;
       }
 
-      final sessionIds =
-          sessionsResponse.map((s) => s['id'] as String).toList();
+      final sessionIds = sessionsResponse.map((s) => s['id'] as String).toList();
 
+      // ✅ Trier par completed_at DESC pour avoir la plus récente en premier
       final response = await _supabase
           .from('quiz_results')
           .select('''
-            total_score,
-            max_possible_score,
-            percentage,
-            completed_at,
-            student_id,
-            profiles!inner (
-              full_name,
-              email
-            ),
-            quiz_sessions (
-              started_at
-            )
+            total_score, max_possible_score, percentage,
+            completed_at, student_id,
+            profiles!inner ( full_name, email ),
+            quiz_sessions ( started_at )
           ''')
           .filter('quiz_session_id', 'in', sessionIds)
-          .order('percentage', ascending: false);
+          .order('completed_at', ascending: false);
+
+      // ✅ Déduplication : garder seulement la dernière tentative par étudiant
+      final Map<String, Map<String, dynamic>> latestByStudent = {};
+      for (final r in response) {
+        final studentId = r['student_id'] as String? ?? '';
+        if (!latestByStudent.containsKey(studentId)) {
+          latestByStudent[studentId] = Map<String, dynamic>.from(r);
+        }
+      }
+
+      // ✅ Trier par pourcentage décroissant
+      final deduplicated = latestByStudent.values.toList()
+        ..sort((a, b) {
+          final pa = (a['percentage'] as num?)?.toDouble() ?? 0;
+          final pb = (b['percentage'] as num?)?.toDouble() ?? 0;
+          return pb.compareTo(pa);
+        });
 
       setState(() {
-        _rankings  = List<Map<String, dynamic>>.from(response);
+        _rankings  = deduplicated;
         _isLoading = false;
       });
     } catch (e) {
@@ -81,13 +86,19 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
     }
   }
 
+  // ✅ Convertir score en note /20
+  double _scoreToNote(dynamic totalScore, dynamic maxScore) {
+    final total = (totalScore as num?)?.toDouble() ?? 0;
+    final max   = (maxScore   as num?)?.toDouble() ?? 0;
+    if (max == 0) return 0;
+    return (total / max) * 20;
+  }
+
   String _formatDate(String dateString) {
     try {
       final date = DateTime.parse(dateString);
       return '${date.day}/${date.month}/${date.year}';
-    } catch (_) {
-      return '—';
-    }
+    } catch (_) { return '—'; }
   }
 
   Color _getRankColor(int rank) {
@@ -99,7 +110,6 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
     }
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     if (_quizData == null) {
@@ -109,15 +119,14 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
       );
     }
 
-    final questionCount =
-        (_quizData!['questions'] as List<dynamic>?)?.length ?? 0;
+    final questionCount = (_quizData!['questions'] as List<dynamic>?)?.length ?? 0;
     final pinCode = _quizData!['pin_code'] as String? ?? '------';
 
     return Scaffold(
       backgroundColor: bg,
       body: Column(
         children: [
-          // ── Header ────────────────────────────────────────────────────────
+          // ── Header ──────────────────────────────────────────────────────
           Container(
             color: primary,
             child: SafeArea(
@@ -125,7 +134,7 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Barre nav
+                  // ✅ Barre nav avec flèche retour
                   Padding(
                     padding: const EdgeInsets.fromLTRB(4, 10, 16, 0),
                     child: Row(
@@ -136,7 +145,6 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
                           onPressed: () => Navigator.pop(context),
                         ),
                         const Spacer(),
-                        // Badge PIN (cohérent avec la carte)
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 5),
@@ -147,10 +155,8 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
                           child: Text(
                             'PIN: $pinCode',
                             style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
+                              color: Colors.white, fontSize: 12,
+                              fontWeight: FontWeight.w700, letterSpacing: 0.5,
                             ),
                           ),
                         ),
@@ -167,19 +173,15 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
                         Text(
                           _quizData!['title'] as String? ?? 'Quiz',
                           style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.4,
+                            color: Colors.white, fontSize: 22,
+                            fontWeight: FontWeight.w900, letterSpacing: -0.4,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Quiz avec $questionCount question${questionCount > 1 ? 's' : ''}',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.55),
-                            fontSize: 12,
-                          ),
+                              color: Colors.white.withOpacity(0.55), fontSize: 12),
                         ),
                       ],
                     ),
@@ -187,28 +189,25 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
 
                   const SizedBox(height: 16),
 
-                  // Stats bar (participants, questions, temps)
+                  // Stats bar
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                     child: Row(
                       children: [
                         _headerStat(
-                          icon: Icons.people_outline_rounded,
-                          value: '${_rankings.length}',
-                          label: 'Participants',
-                        ),
+                            icon: Icons.people_outline_rounded,
+                            value: '${_rankings.length}',
+                            label: 'Participants'),
                         const SizedBox(width: 10),
                         _headerStat(
-                          icon: Icons.help_outline_rounded,
-                          value: '$questionCount',
-                          label: 'Questions',
-                        ),
+                            icon: Icons.help_outline_rounded,
+                            value: '$questionCount',
+                            label: 'Questions'),
                         const SizedBox(width: 10),
                         _headerStat(
-                          icon: Icons.timer_outlined,
-                          value: '${_quizData!['time_limit'] ?? 20}s',
-                          label: 'Temps/Q',
-                        ),
+                            icon: Icons.timer_outlined,
+                            value: '${_quizData!['time_limit'] ?? 20}s',
+                            label: 'Temps/Q'),
                       ],
                     ),
                   ),
@@ -217,19 +216,17 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
             ),
           ),
 
-          // ── Liste ─────────────────────────────────────────────────────────
+          // ── Liste ────────────────────────────────────────────────────────
           Expanded(
             child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: primary))
+                ? const Center(child: CircularProgressIndicator(color: primary))
                 : _rankings.isEmpty
                     ? _buildEmptyState()
                     : RefreshIndicator(
                         onRefresh: _loadRankings,
                         color: primary,
                         child: ListView.builder(
-                          padding:
-                              const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                           itemCount: _rankings.length,
                           itemBuilder: (context, i) =>
                               _buildRankCard(_rankings[i], i + 1),
@@ -241,8 +238,6 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
     );
   }
 
-  // ── Widgets helpers ───────────────────────────────────────────────────────
-
   Widget _headerStat({
     required IconData icon,
     required String value,
@@ -252,28 +247,20 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12)),
         child: Column(
           children: [
             Icon(icon, color: Colors.white70, size: 16),
             const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.55),
-                fontSize: 10,
-              ),
-            ),
+            Text(value,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900)),
+            Text(label,
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.55), fontSize: 10)),
           ],
         ),
       ),
@@ -286,24 +273,16 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 80,
-            height: 80,
+            width: 80, height: 80,
             decoration: BoxDecoration(
-              color: primary.withOpacity(0.07),
-              shape: BoxShape.circle,
-            ),
+                color: primary.withOpacity(0.07), shape: BoxShape.circle),
             child: Icon(Icons.leaderboard_outlined,
                 size: 38, color: primary.withOpacity(0.3)),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Aucun participant',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: primary,
-            ),
-          ),
+          const Text('Aucun participant',
+              style: TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w700, color: primary)),
           const SizedBox(height: 6),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 48),
@@ -319,15 +298,19 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
   }
 
   Widget _buildRankCard(Map<String, dynamic> ranking, int rank) {
-    final rankColor  = _getRankColor(rank);
-    final name       = ranking['profiles']?['full_name'] as String?
+    final rankColor = _getRankColor(rank);
+    final name      = ranking['profiles']?['full_name'] as String?
         ?? 'Participant #$rank';
-    final email      = ranking['profiles']?['email'] as String? ?? '';
-    final pct        = (ranking['percentage'] as num?)?.toStringAsFixed(1) ?? '0.0';
-    final score      = ranking['total_score'] ?? 0;
-    final maxScore   = ranking['max_possible_score'] ?? 0;
-    final date       = _formatDate(ranking['completed_at'] as String? ?? '');
-    final isTop3     = rank <= 3;
+    final email     = ranking['profiles']?['email'] as String? ?? '';
+    final score     = ranking['total_score']        ?? 0;
+    final maxScore  = ranking['max_possible_score'] ?? 0;
+    final date      = _formatDate(ranking['completed_at'] as String? ?? '');
+    final isTop3    = rank <= 3;
+
+    // ✅ Note /20
+    final note    = _scoreToNote(score, maxScore);
+    final noteStr = note.toStringAsFixed(1);
+    final pct     = (ranking['percentage'] as num?)?.toStringAsFixed(1) ?? '0.0';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -336,25 +319,23 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: primary.withOpacity(0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          ),
+              color: primary.withOpacity(0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 3))
         ],
       ),
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Barre colorée à gauche (même principe que les cartes quiz)
+            // Barre colorée gauche
             Container(
               width: 4,
               decoration: BoxDecoration(
                 color: rankColor,
                 borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  bottomLeft: Radius.circular(16),
-                ),
+                    topLeft: Radius.circular(16),
+                    bottomLeft: Radius.circular(16)),
               ),
             ),
 
@@ -364,100 +345,96 @@ class _QuizRankingPageState extends State<QuizRankingPage> {
               alignment: Alignment.center,
               child: isTop3
                   ? Text(
-                      rank == 1
-                          ? '🥇'
-                          : rank == 2
-                              ? '🥈'
-                              : '🥉',
-                      style: const TextStyle(fontSize: 22),
-                    )
+                      rank == 1 ? '🥇' : rank == 2 ? '🥈' : '🥉',
+                      style: const TextStyle(fontSize: 22))
                   : Text(
                       '#$rank',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: primary.withOpacity(0.5),
-                      ),
-                    ),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: primary.withOpacity(0.5))),
             ),
 
-            // Séparateur vertical léger
             VerticalDivider(
-              width: 1,
-              thickness: 1,
-              color: Colors.grey.shade100,
-              indent: 12,
-              endIndent: 12,
-            ),
+                width: 1,
+                thickness: 1,
+                color: Colors.grey.shade100,
+                indent: 12,
+                endIndent: 12),
 
             // Infos participant
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: primary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    Text(name,
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: primary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 2),
-                    Text(
-                      email,
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.grey.shade400),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    Text(email,
+                        style:
+                            TextStyle(fontSize: 11, color: Colors.grey.shade400),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 8),
-                    // Barre de progression du score
+                    // Barre de progression
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
-                        value: maxScore > 0 ? score / maxScore : 0,
+                        value: (maxScore as num) > 0
+                            ? (score as num) / (maxScore as num)
+                            : 0,
                         minHeight: 5,
-                        backgroundColor:
-                            rankColor.withOpacity(0.12),
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(rankColor),
+                        backgroundColor: rankColor.withOpacity(0.12),
+                        valueColor: AlwaysStoppedAnimation<Color>(rankColor),
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      date,
-                      style: TextStyle(
-                          fontSize: 10, color: Colors.grey.shade400),
-                    ),
+                    Text(date,
+                        style: TextStyle(
+                            fontSize: 10, color: Colors.grey.shade400)),
                   ],
                 ),
               ),
             ),
 
-            // Score à droite
+            // ✅ Note /20 + % à droite
             Padding(
-              padding: const EdgeInsets.fromLTRB(0, 12, 16, 12),
+              padding: const EdgeInsets.fromLTRB(0, 12, 14, 12),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '$pct%',
+                    noteStr,
                     style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: rankColor,
-                    ),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: rankColor),
                   ),
                   Text(
-                    '$score/$maxScore',
+                    '/20',
                     style: TextStyle(
-                        fontSize: 11, color: Colors.grey.shade400),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: rankColor.withOpacity(0.6)),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$pct%',
+                    style:
+                        TextStyle(fontSize: 11, color: Colors.grey.shade400),
+                  ),
+                  Text(
+                    '$score/$maxScore pts',
+                    style:
+                        TextStyle(fontSize: 10, color: Colors.grey.shade400),
                   ),
                 ],
               ),

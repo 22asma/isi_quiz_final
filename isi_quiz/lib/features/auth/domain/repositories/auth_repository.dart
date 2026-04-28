@@ -16,4 +16,7 @@ abstract class AuthRepository {
   Future<Either<Failure, void>> resetPassword(String email);
   Future<Either<Failure, User?>> getCurrentUser();
   Stream<User?> get authStateChanges;
+
+  Future<Either<Failure, User>> verifyOtp(String email, String token);
+  Future<Either<Failure, void>> resendVerificationEmail(String email);
 }

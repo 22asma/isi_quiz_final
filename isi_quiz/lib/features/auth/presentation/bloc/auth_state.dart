@@ -51,3 +51,11 @@ class EmailNotVerified extends AuthStatus {
   @override
   List<Object?> get props => [email];
 }
+
+class OtpVerified extends AuthStatus {
+  final User user;
+  const OtpVerified(this.user);
+
+  @override
+  List<Object?> get props => [user];
+}

@@ -3,6 +3,7 @@ import 'package:isi_quiz/features/auth/data/models/user_model.dart';
 import 'package:isi_quiz/features/auth/domain/usecases/reset_password_usecase.dart';
 import 'package:isi_quiz/features/auth/domain/usecases/sign_in_usecase.dart';
 import 'package:isi_quiz/features/auth/domain/usecases/sign_up_usecase.dart';
+import 'package:isi_quiz/features/quiz/services/quiz_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/entities/user.dart' as entity;
 import 'auth_event.dart';
@@ -22,6 +23,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthStatus> {
     on<SignUpEvent>(_onSignUp);
     on<ResetPasswordEvent>(_onResetPassword);
     on<ResendVerificationEmailEvent>(_onResendVerification);
+    on<VerifyOtpEvent>(_onVerifyOtp);
     on<SignOutEvent>(_onSignOut);
     on<CheckAuthStatusEvent>(_onCheckAuthStatus);
   }
@@ -45,14 +47,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthStatus> {
         return;
       }
 
-      final role = response.user!.userMetadata?['role'] ?? 'Student';
+      await QuizService().ensureProfileOnLogin();
+
       final user = entity.User(
         id: response.user!.id,
         email: response.user!.email ?? '',
         fullName: response.user!.userMetadata?['full_name'],
         university: response.user!.userMetadata?['university'],
         institute: response.user!.userMetadata?['institute'],
-        role: role,
+        role: response.user!.userMetadata?['role'] ?? 'Student',
       );
       emit(Authenticated(user));
     } catch (e) {
@@ -83,6 +86,42 @@ class AuthBloc extends Bloc<AuthEvent, AuthStatus> {
         }
       },
     );
+  }
+
+  Future<void> _onVerifyOtp(
+    VerifyOtpEvent event,
+    Emitter<AuthStatus> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      final response = await Supabase.instance.client.auth.verifyOTP(
+        email: event.email,
+        token: event.token,
+        type: OtpType.signup,
+      );
+
+      if (response.user == null) {
+        emit(const AuthError('Invalid or expired code. Please try again.'));
+        return;
+      }
+
+      // ✅ Créer le profil
+      await QuizService().ensureProfileOnLogin();
+
+      final user = entity.User(
+        id: response.user!.id,
+        email: response.user!.email ?? '',
+        fullName: response.user!.userMetadata?['full_name'],
+        university: response.user!.userMetadata?['university'],
+        institute: response.user!.userMetadata?['institute'],
+        role: response.user!.userMetadata?['role'] ?? 'Student',
+      );
+
+      // ✅ Émettre Authenticated directement
+      emit(Authenticated(user));
+    } catch (e) {
+      emit(AuthError('Verification failed: $e'));
+    }
   }
 
   Future<void> _onResendVerification(
@@ -120,8 +159,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthStatus> {
     CheckAuthStatusEvent event,
     Emitter<AuthStatus> emit,
   ) async {
+    // ✅ Laisser le temps à la session Supabase de se charger
+    await Future.delayed(const Duration(milliseconds: 300));
+
     final currentUser = Supabase.instance.client.auth.currentUser;
+
     if (currentUser != null && currentUser.emailConfirmedAt != null) {
+      await QuizService().ensureProfileOnLogin();
+
       final user = entity.User(
         id: currentUser.id,
         email: currentUser.email ?? '',

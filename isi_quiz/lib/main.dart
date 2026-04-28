@@ -24,23 +24,40 @@ import 'features/auth/domain/usecases/sign_up_usecase.dart';
 import 'features/auth/domain/usecases/reset_password_usecase.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
+import 'package:app_links/app_links.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   await Supabase.initialize(
     url: AppConstants.supabaseUrl,
     anonKey: AppConstants.supabaseAnonKey,
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+    ),
   );
-  
-  // Initialiser les dépendances
+
+  // ✅ Gérer le deep link initial (app fermée puis ouverte via lien)
+  final appLinks = AppLinks();
+  final initialUri = await appLinks.getInitialLink();
+  if (initialUri != null && initialUri.scheme == 'isiquiz') {
+    await Supabase.instance.client.auth.getSessionFromUrl(initialUri);
+  }
+
+  // ✅ Gérer les deep links quand l'app est déjà ouverte
+  appLinks.uriLinkStream.listen((uri) {
+    if (uri.scheme == 'isiquiz') {
+      Supabase.instance.client.auth.getSessionFromUrl(uri);
+    }
+  });
+
   final supabaseClient = Supabase.instance.client;
   final authRemoteDataSource = AuthRemoteDataSourceImpl(supabaseClient: supabaseClient);
   final authRepository = AuthRepositoryImpl(remoteDataSource: authRemoteDataSource);
   final signInUseCase = SignInUseCase(authRepository);
   final signUpUseCase = SignUpUseCase(authRepository);
   final resetPasswordUseCase = ResetPasswordUseCase(authRepository);
-  
+
   runApp(MyApp(
     signInUseCase: signInUseCase,
     signUpUseCase: signUpUseCase,

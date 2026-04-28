@@ -27,7 +27,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final _passwordController = TextEditingController();
   final _universityController = TextEditingController();
   final _instituteController = TextEditingController();
-  
+
   String _selectedRole = 'Student';
   String? _selectedUniversity;
   String? _selectedFaculty;
@@ -52,8 +52,12 @@ class _SignUpPageState extends State<SignUpPage> {
           email: _emailController.text.trim(),
           password: _passwordController.text,
           fullName: _fullNameController.text.trim(),
-          university: _isCustomUniversity ? _universityController.text.trim() : _selectedUniversity,
-          institute: _isCustomFaculty ? _instituteController.text.trim() : _selectedFaculty,
+          university: _isCustomUniversity
+              ? _universityController.text.trim()
+              : _selectedUniversity,
+          institute: _isCustomFaculty
+              ? _instituteController.text.trim()
+              : _selectedFaculty,
           role: _selectedRole,
         ),
       );
@@ -80,31 +84,42 @@ class _SignUpPageState extends State<SignUpPage> {
         title: Text(
           AppConstants.appName,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: AppTheme.primaryColor,
-            fontWeight: FontWeight.w600,
-          ),
+                color: AppTheme.primaryColor,
+                fontWeight: FontWeight.w600,
+              ),
         ),
       ),
-       body: BlocListener<AuthBloc, AuthStatus>(
-  listener: (context, state) {
-    if (state is Authenticated) {
-      Navigator.pushReplacementNamed(context, AppConstants.homeRoute);
-    } else if (state is EmailNotVerified) {  // ✅ AJOUTÉ
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => EmailVerificationPage(email: state.email),
-        ),
-      );
-    } else if (state is AuthError) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(state.message),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
-    }
-      },
+      body: BlocListener<AuthBloc, AuthStatus>(
+        listener: (context, state) {
+          if (state is Authenticated) {
+            Navigator.pushReplacementNamed(context, AppConstants.homeRoute);
+          } else if (state is EmailVerificationSent) {
+            // ✅ FIX : gérer l'état après signup réussi
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    EmailVerificationPage(email: state.email),
+              ),
+            );
+          } else if (state is EmailNotVerified) {
+            // Tentative de login avec email non vérifié (cas rare ici)
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    EmailVerificationPage(email: state.email),
+              ),
+            );
+          } else if (state is AuthError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: AppTheme.errorColor,
+              ),
+            );
+          }
+        },
         child: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(AppConstants.defaultPadding),
@@ -114,27 +129,27 @@ class _SignUpPageState extends State<SignUpPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 20),
-                  
+
                   // Create Account Text
                   Text(
                     'Create Account',
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      color: AppTheme.primaryColor,
-                      fontWeight: FontWeight.bold,
-                    ),
+                          color: AppTheme.primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
-                  
+
                   const SizedBox(height: 8),
-                  
+
                   Text(
                     'Join ISI Quiz and start your learning journey',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.textSecondary,
-                    ),
+                          color: AppTheme.textSecondary,
+                        ),
                   ),
-                  
+
                   const SizedBox(height: 30),
-                  
+
                   // Full Name Field
                   CustomTextField(
                     controller: _fullNameController,
@@ -148,9 +163,9 @@ class _SignUpPageState extends State<SignUpPage> {
                       return null;
                     },
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // University Field with Dropdown or Manual Input
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,12 +176,16 @@ class _SignUpPageState extends State<SignUpPage> {
                             child: CustomTextField(
                               controller: _universityController,
                               label: 'University',
-                              hintText: _isCustomUniversity ? 'Enter university name' : 'Select your university',
+                              hintText: _isCustomUniversity
+                                  ? 'Enter university name'
+                                  : 'Select your university',
                               prefixIcon: FontAwesomeIcons.graduationCap,
                               readOnly: !_isCustomUniversity,
-                              onTap: _isCustomUniversity ? null : () {
-                                _showUniversityDialog();
-                              },
+                              onTap: _isCustomUniversity
+                                  ? null
+                                  : () {
+                                      _showUniversityDialog();
+                                    },
                               validator: (value) {
                                 if (value?.isEmpty ?? true) {
                                   return 'Please enter or select your university';
@@ -189,22 +208,28 @@ class _SignUpPageState extends State<SignUpPage> {
                               });
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: _isCustomUniversity ? AppTheme.primaryColor : Colors.grey[200],
-                              foregroundColor: _isCustomUniversity ? Colors.white : AppTheme.primaryColor,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              backgroundColor: _isCustomUniversity
+                                  ? AppTheme.primaryColor
+                                  : Colors.grey[200],
+                              foregroundColor: _isCustomUniversity
+                                  ? Colors.white
+                                  : AppTheme.primaryColor,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            child: Text(_isCustomUniversity ? 'List' : 'Other'),
+                            child:
+                                Text(_isCustomUniversity ? 'List' : 'Other'),
                           ),
                         ],
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Institute/Faculty Field with Dropdown or Manual Input
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,25 +240,33 @@ class _SignUpPageState extends State<SignUpPage> {
                             child: CustomTextField(
                               controller: _instituteController,
                               label: 'Institute/Faculty',
-                              hintText: _isCustomFaculty ? 'Enter institute/faculty name' : 'Select your institute/faculty',
+                              hintText: _isCustomFaculty
+                                  ? 'Enter institute/faculty name'
+                                  : 'Select your institute/faculty',
                               prefixIcon: FontAwesomeIcons.building,
                               readOnly: !_isCustomFaculty,
-                              onTap: _isCustomFaculty ? null : () {
-                                if (_selectedUniversity != null && !_isCustomUniversity) {
-                                  _showFacultyDialog();
-                                } else if (_isCustomUniversity) {
-                                  setState(() {
-                                    _isCustomFaculty = true;
-                                  });
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Please select a university first'),
-                                      backgroundColor: AppTheme.warningColor,
-                                    ),
-                                  );
-                                }
-                              },
+                              onTap: _isCustomFaculty
+                                  ? null
+                                  : () {
+                                      if (_selectedUniversity != null &&
+                                          !_isCustomUniversity) {
+                                        _showFacultyDialog();
+                                      } else if (_isCustomUniversity) {
+                                        setState(() {
+                                          _isCustomFaculty = true;
+                                        });
+                                      } else {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                                'Please select a university first'),
+                                            backgroundColor:
+                                                AppTheme.warningColor,
+                                          ),
+                                        );
+                                      }
+                                    },
                               validator: (value) {
                                 if (value?.isEmpty ?? true) {
                                   return 'Please enter or select your institute/faculty';
@@ -254,9 +287,14 @@ class _SignUpPageState extends State<SignUpPage> {
                               });
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: _isCustomFaculty ? AppTheme.primaryColor : Colors.grey[200],
-                              foregroundColor: _isCustomFaculty ? Colors.white : AppTheme.primaryColor,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              backgroundColor: _isCustomFaculty
+                                  ? AppTheme.primaryColor
+                                  : Colors.grey[200],
+                              foregroundColor: _isCustomFaculty
+                                  ? Colors.white
+                                  : AppTheme.primaryColor,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -267,10 +305,10 @@ class _SignUpPageState extends State<SignUpPage> {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
-                  // Email Field (auto-generated based on selection)
+
+                  // Email Field
                   CustomTextField(
                     controller: _emailController,
                     label: 'University Email',
@@ -287,9 +325,9 @@ class _SignUpPageState extends State<SignUpPage> {
                       return null;
                     },
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Password Field
                   CustomTextField(
                     controller: _passwordController,
@@ -301,7 +339,6 @@ class _SignUpPageState extends State<SignUpPage> {
                       if (value?.isEmpty ?? true) {
                         return 'Please enter a password';
                       }
-                      // Enhanced password validation
                       if (value!.length < 8) {
                         return 'Password must be at least 8 characters';
                       }
@@ -314,29 +351,30 @@ class _SignUpPageState extends State<SignUpPage> {
                       if (!value.contains(RegExp(r'[0-9]'))) {
                         return 'Password must contain at least one number';
                       }
-                      if (!value.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+                      if (!value.contains(
+                          RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
                         return 'Password must contain at least one special character';
                       }
                       return null;
                     },
                     onChanged: _onPasswordChanged,
                   ),
-                  
+
                   // Password Validation Widget
                   PasswordValidationWidget(
                     password: _passwordController.text,
                     showValidation: _showPasswordValidation,
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Role Selection
                   Text(
                     'Role',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppTheme.textSecondary,
-                      fontWeight: FontWeight.w500,
-                    ),
+                          color: AppTheme.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
                   ),
                   const SizedBox(height: 8),
                   SegmentedControl(
@@ -348,9 +386,9 @@ class _SignUpPageState extends State<SignUpPage> {
                       });
                     },
                   ),
-                  
+
                   const SizedBox(height: 30),
-                  
+
                   // Sign Up Button
                   BlocBuilder<AuthBloc, AuthStatus>(
                     builder: (context, state) {
@@ -359,7 +397,8 @@ class _SignUpPageState extends State<SignUpPage> {
                         onPressed: state is AuthLoading
                             ? () {}
                             : () {
-                                if (_formKey.currentState?.validate() ?? false) {
+                                if (_formKey.currentState?.validate() ??
+                                    false) {
                                   _signUp();
                                 }
                               },
@@ -368,9 +407,9 @@ class _SignUpPageState extends State<SignUpPage> {
                       );
                     },
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Sign In Link
                   Center(
                     child: Row(
@@ -378,20 +417,25 @@ class _SignUpPageState extends State<SignUpPage> {
                       children: [
                         Text(
                           'Already have an account? ',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.textSecondary,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: AppTheme.textSecondary,
+                                  ),
                         ),
                         TextButton(
                           onPressed: () {
-                            Navigator.pushNamed(context, AppConstants.signInRoute);
+                            Navigator.pushNamed(
+                                context, AppConstants.signInRoute);
                           },
                           child: Text(
                             'Log in',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.primaryColor,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: AppTheme.primaryColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
                           ),
                         ),
                       ],
@@ -415,18 +459,22 @@ class _SignUpPageState extends State<SignUpPage> {
           width: double.maxFinite,
           child: ListView(
             shrinkWrap: true,
-            children: UniversityData.getUniversityNames().map((university) => ListTile(
-              title: Text(university),
-              onTap: () {
-                setState(() {
-                  _selectedUniversity = university;
-                  _universityController.text = university;
-                  _selectedFaculty = null;
-                  _instituteController.clear();
-                });
-                Navigator.pop(context);
-              },
-            )).toList(),
+            children: UniversityData.getUniversityNames()
+                .map(
+                  (university) => ListTile(
+                    title: Text(university),
+                    onTap: () {
+                      setState(() {
+                        _selectedUniversity = university;
+                        _universityController.text = university;
+                        _selectedFaculty = null;
+                        _instituteController.clear();
+                      });
+                      Navigator.pop(context);
+                    },
+                  ),
+                )
+                .toList(),
           ),
         ),
       ),
@@ -434,8 +482,9 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   void _showFacultyDialog() {
-    final faculties = UniversityData.getFacultiesForUniversity(_selectedUniversity!);
-    
+    final faculties =
+        UniversityData.getFacultiesForUniversity(_selectedUniversity!);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -444,23 +493,25 @@ class _SignUpPageState extends State<SignUpPage> {
           width: double.maxFinite,
           child: ListView(
             shrinkWrap: true,
-            children: faculties.map((faculty) => ListTile(
-              title: Text(faculty.name),
-              subtitle: Text(faculty.abbreviation),
-              onTap: () {
-                setState(() {
-                  _selectedFaculty = faculty.name;
-                  _instituteController.text = faculty.name;
-                  // Auto-update email hint based on faculty
-                  _emailController.clear();
-                });
-                Navigator.pop(context);
-              },
-            )).toList(),
+            children: faculties
+                .map(
+                  (faculty) => ListTile(
+                    title: Text(faculty.name),
+                    subtitle: Text(faculty.abbreviation),
+                    onTap: () {
+                      setState(() {
+                        _selectedFaculty = faculty.name;
+                        _instituteController.text = faculty.name;
+                        _emailController.clear();
+                      });
+                      Navigator.pop(context);
+                    },
+                  ),
+                )
+                .toList(),
           ),
         ),
       ),
     );
   }
-  
 }

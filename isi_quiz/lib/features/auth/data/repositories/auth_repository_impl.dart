@@ -91,4 +91,28 @@ class AuthRepositoryImpl implements AuthRepository {
   Stream<User?> get authStateChanges {
     return remoteDataSource.authStateChanges();
   }
+
+  @override
+Future<Either<Failure, User>> verifyOtp(String email, String token) async {
+  try {
+    final userModel = await remoteDataSource.verifyOtp(email, token);
+    return Right(userModel);
+  } on ServerException catch (e) {
+    return Left(ServerFailure(e.message));
+  } catch (e) {
+    return Left(ServerFailure('Verification failed'));
+  }
+}
+
+@override
+Future<Either<Failure, void>> resendVerificationEmail(String email) async {
+  try {
+    await remoteDataSource.resendVerificationEmail(email);
+    return const Right(null);
+  } on ServerException catch (e) {
+    return Left(ServerFailure(e.message));
+  } catch (e) {
+    return Left(ServerFailure('Failed to resend email'));
+  }
+}
 }
